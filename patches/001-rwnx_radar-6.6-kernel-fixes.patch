@@ -1,0 +1,49 @@
+--- a/drivers/aic8800/aic8800_fdrv/rwnx_radar.c.orig
++++ b/drivers/aic8800/aic8800_fdrv/rwnx_radar.c
+@@ -15,6 +15,7 @@
+ #include <linux/kernel.h>
+ #include <linux/ktime.h>
+ #include <net/mac80211.h>
++#include <linux/version.h>
+ 
+ #include "rwnx_radar.h"
+ #include "rwnx_defs.h"
+@@ -1395,11 +1396,17 @@
+     }
+ 
+     ctxt = &rwnx_hw->chanctx_table[radar->cac_vif->ch_index];
+-    cfg80211_cac_event(radar->cac_vif->ndev,
++    #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
++       cfg80211_cac_event(radar->cac_vif->ndev,
++                       &ctxt->chan_def,
++                       NL80211_RADAR_CAC_FINISHED, GFP_KERNEL);
++    #else
++       cfg80211_cac_event(radar->cac_vif->ndev,
+                     #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+                        &ctxt->chan_def,
+                     #endif
+                        NL80211_RADAR_CAC_FINISHED, GFP_KERNEL,0);
++    #endif
+     rwnx_send_apm_stop_cac_req(rwnx_hw, radar->cac_vif);
+     rwnx_chanctx_unlink(radar->cac_vif);
+ 
+@@ -1495,11 +1502,17 @@
+         struct rwnx_chanctx *ctxt;
+         ctxt = &rwnx_hw->chanctx_table[radar->cac_vif->ch_index];
+         rwnx_send_apm_stop_cac_req(rwnx_hw, radar->cac_vif);
+-        cfg80211_cac_event(radar->cac_vif->ndev,
++	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
++	   cfg80211_cac_event(radar->cac_vif->ndev,
++                       &ctxt->chan_def,
++                       NL80211_RADAR_CAC_ABORTED, GFP_KERNEL);
++	#else
++           cfg80211_cac_event(radar->cac_vif->ndev,
+                         #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+                            &ctxt->chan_def,
+                         #endif
+                            NL80211_RADAR_CAC_ABORTED, GFP_KERNEL,0);
++	#endif
+         rwnx_chanctx_unlink(radar->cac_vif);
+     }
+ 
+

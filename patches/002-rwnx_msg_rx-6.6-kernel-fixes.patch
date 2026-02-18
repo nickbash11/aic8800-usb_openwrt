@@ -1,0 +1,37 @@
+--- a/drivers/aic8800/aic8800_fdrv/rwnx_msg_rx.c
++++ b/drivers/aic8800/aic8800_fdrv/rwnx_msg_rx.c
+@@ -28,6 +28,15 @@
+ #ifdef CONFIG_USE_WIRELESS_EXT
+ #include "aicwf_wext_linux.h"
+ #endif
++#include <linux/version.h>
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++/* Prototype for __cfg80211_get_bss from backports */
++struct cfg80211_bss *__cfg80211_get_bss(struct wiphy *wiphy,
++                                        struct ieee80211_channel *channel,
++                                        const u8 *bssid,
++                                        const u8 *ssid, size_t ssid_len,
++                                        u16 capa_mask, u16 capa_val);
++#endif
+ void rwnx_cfg80211_unlink_bss(struct rwnx_hw *rwnx_hw, struct rwnx_vif *rwnx_vif);
+ 
+ static int rwnx_freq_to_idx(struct rwnx_hw *rwnx_hw, int freq)
+@@ -988,7 +997,7 @@
+         (int)atomic_read(&rwnx_vif->drv_conn_state));
+ 
+ 	do {
+-		bss = cfg80211_get_bss(wdev->wiphy, NULL, rwnx_vif->sta.bssid,
++		bss = __cfg80211_get_bss(wdev->wiphy, NULL, rwnx_vif->sta.bssid,
+ #if LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION
+ 							wdev->u.client.ssid, wdev->u.client.ssid_len,
+ #else
+@@ -1121,7 +1130,7 @@
+ 
+ 	RWNX_DBG(RWNX_FN_ENTRY_STR);
+ 
+-	bss = cfg80211_get_bss(wiphy, NULL/*notify_channel*/,
++	bss = __cfg80211_get_bss(wiphy, NULL/*notify_channel*/,
+ 		rwnx_vif->sta.bssid, rwnx_vif->sta.ssid,
+ 		rwnx_vif->sta.ssid_len,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)
+

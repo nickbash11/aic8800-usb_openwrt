@@ -1,0 +1,72 @@
+--- a/drivers/aic8800/aic8800_fdrv/rwnx_main.c
++++ b/drivers/aic8800/aic8800_fdrv/rwnx_main.c
+@@ -43,7 +43,7 @@
+ #include "aicwf_txrxif.h"
+ #include "aicwf_compat_8800dc.h"
+ #include "aicwf_compat_8800d80.h"
+-
++#include <linux/version.h>
+ 
+ #ifdef CONFIG_USE_WIRELESS_EXT
+ #include "aicwf_wext_linux.h"
+@@ -1080,7 +1080,9 @@
+         } else
+             rwnx_txq_vif_stop(vif, RWNX_TXQ_STOP_CHAN, rwnx_hw);
+         spin_unlock_bh(&rwnx_hw->cb_lock);
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++		cfg80211_ch_switch_notify(vif->ndev, &csa->chandef, 0, 0);
++#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+                 cfg80211_ch_switch_notify(vif->ndev, &csa->chandef, 0);
+ #elif (LINUX_VERSION_CODE >=KERNEL_VERSION(5, 19, 2))
+                 cfg80211_ch_switch_notify(vif->ndev, &csa->chandef, 0);
+@@ -5804,6 +5806,25 @@
+     #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+ }
+ 
++
++static int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
++                                               struct net_device *dev,
++                                               struct cfg80211_chan_def *chandef,
++                                               u32 cac_time_ms,
++                                               int unused);
++
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
++static int rwnx_cfg80211_start_radar_detection_4args(struct wiphy *wiphy,
++                                                     struct net_device *dev,
++                                                     struct cfg80211_chan_def *chandef,
++                                                     u32 cac_time_ms)
++{
++    return rwnx_cfg80211_start_radar_detection(wiphy, dev, chandef, cac_time_ms, 0);
++}
++#endif
++
++
+ /**
+  * @start_radar_detection: Start radar detection in the driver.
+  */
+@@ -5964,7 +5985,9 @@
+     } else {
+         INIT_WORK(&csa->work, rwnx_csa_finish);
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++	cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, 0, params->block_tx);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+         cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, params->block_tx);
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+         cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, params->block_tx);
+@@ -6974,7 +6997,11 @@
+     .cancel_remain_on_channel = rwnx_cfg80211_cancel_remain_on_channel,
+     .dump_survey = rwnx_cfg80211_dump_survey,
+     .get_channel = rwnx_cfg80211_get_channel,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+     .start_radar_detection = rwnx_cfg80211_start_radar_detection,
++#else
++    .start_radar_detection = rwnx_cfg80211_start_radar_detection_4args,
++#endif
+     .update_ft_ies = rwnx_cfg80211_update_ft_ies,
+     .set_cqm_rssi_config = rwnx_cfg80211_set_cqm_rssi_config,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+
