@@ -1,8 +1,8 @@
 # Tenda AIC8800 Linux Driver for OpenWrt (24.10.x)
 
 ## Description
-This repository contains the modified Tenda AIC8800 USB WiFi driver to support OpenWrt (24.10.x)
-It's an adoptation of repository https://github.com/friddle/arch-aic8800-6.12
+This repository contains the modified Tenda AIC8800 USB WiFi driver to support OpenWrt (24.10.x).
+It's an adoptation of repository https://github.com/friddle/arch-aic8800-6.12 for OpenWrt build environment.
 
 ## Features
 - Support for Tenda AX300 USB WiFi adapter
