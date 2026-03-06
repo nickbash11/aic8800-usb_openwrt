@@ -2,7 +2,6 @@
 
 ## Description
 This repository contains the modified Tenda AIC8800 USB WiFi driver to support OpenWrt (24.10.x).
-It's an adoptation of repository https://github.com/friddle/arch-aic8800-6.12 for OpenWrt build environment.
 
 ## Features
 - Support for Tenda AX300 USB WiFi adapter
@@ -34,7 +33,7 @@ make package/aic8800-usb/compile V=s -j$(nproc)
 ## Package
 After building you can find the package in your target destination:
 ```bash
-ls -alh bin/targets/sunxi/cortexa7/packages/kmod-aic8800-usb_6.6.110.1.0-r1_arm_cortex-a7_neon-vfpv4.ipk
+ls -alh bin/targets/sunxi/cortexa7/packages/kmod-aic8800-usb_6.6.119.1.0-r1_arm_cortex-a7_neon-vfpv4.ipk
 ```
 
 ## Troubleshooting

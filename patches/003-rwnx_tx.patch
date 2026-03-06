@@ -1,0 +1,29 @@
+--- a/drivers/aic8800/aic8800_fdrv/rwnx_tx.c
++++ b/drivers/aic8800/aic8800_fdrv/rwnx_tx.c
+@@ -288,6 +288,7 @@
+ 
+ u16 rwnx_select_txq(struct rwnx_vif *rwnx_vif, struct sk_buff *skb)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = rwnx_vif->rwnx_hw;
+     struct wireless_dev *wdev = &rwnx_vif->wdev;
+     struct rwnx_sta *sta = NULL;
+@@ -1431,6 +1432,18 @@
+     struct msg_buf *msgbuf;
+ #endif
+ 
++    if (!dev || !netdev_priv(dev)) {
++        pr_err("aic8800: %s: dev or priv NULL\n", __func__);
++        dev_kfree_skb(skb);
++        return NETDEV_TX_OK;
++    }
++    struct rwnx_vif *vif = netdev_priv(dev);
++    if (!vif || !vif->rwnx_hw) {
++        pr_err("aic8800: %s: vif or rwnx_hw NULL\n", __func__);
++        dev_kfree_skb(skb);
++        return NETDEV_TX_OK;
++    }
++
+ #ifdef CONFIG_ONE_TXQ
+     skb->queue_mapping = rwnx_select_txq(rwnx_vif, skb);
+ #endif

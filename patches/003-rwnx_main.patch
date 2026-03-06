@@ -1,0 +1,1044 @@
+--- a/drivers/aic8800/aic8800_fdrv/rwnx_main.c	2026-03-06 14:20:44.020239969 +0300
++++ b/drivers/aic8800/aic8800_fdrv/rwnx_main.c	2026-03-06 17:22:56.144400681 +0300
+@@ -10,6 +10,7 @@
+  ******************************************************************************
+  */
+ 
++#include <linux/err.h> 
+ #include <linux/module.h>
+ #include <linux/pci.h>
+ #include <linux/inetdevice.h>
+@@ -539,6 +540,7 @@
+ 
+ 
+ void rwnx_skb_align_8bytes(struct sk_buff *skb){
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #ifdef CONFIG_ALIGN_8BYTES
+ 	int align __maybe_unused;
+ 	u8 *data;
+@@ -566,6 +568,7 @@
+ void rwnx_free_cmd_array(void);
+ 
+ void rwnx_data_dump(char* tag, void* data, unsigned long len){
++        printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	unsigned long i = 0;
+ 	char* data_ = (char* )data;
+ 
+@@ -606,6 +609,7 @@
+ #define QOS_MAC_HDR_LEN 26
+ 
+ void rwnx_frame_parser(char* tag, char* data, unsigned long len){
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	char print_data[100];
+ 	int print_index = 0;
+ 
+@@ -750,6 +754,7 @@
+  *********************************************************************/
+ struct rwnx_sta *rwnx_get_sta(struct rwnx_hw *rwnx_hw, const u8 *mac_addr)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int i;
+ 
+     for (i = 0; i < NX_REMOTE_STA_MAX; i++) {
+@@ -763,6 +768,7 @@
+ 
+ void rwnx_enable_wapi(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     //cipher_suites[rwnx_hw->wiphy->n_cipher_suites] = WLAN_CIPHER_SUITE_SMS4;
+     rwnx_hw->wiphy->n_cipher_suites ++;
+     rwnx_hw->wiphy->flags |= WIPHY_FLAG_CONTROL_PORT_PROTOCOL;
+@@ -770,6 +776,7 @@
+ 
+ void rwnx_enable_mfp(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     cipher_suites[rwnx_hw->wiphy->n_cipher_suites] = WLAN_CIPHER_SUITE_AES_CMAC;
+     rwnx_hw->wiphy->n_cipher_suites ++;
+ }
+@@ -779,6 +786,7 @@
+ extern u8_l vendor_extension_len;
+ 
+ void rwnx_insert_vendor_extension_in_bcn(struct rwnx_bcn *bcn){
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	u8_l temp_ie[256];
+ 	u8_l vendor_extension_subelement[3] = {0x00,0x37,0x2A};
+ 	u8_l vendor_extension_id[2] = {0x10,0x49};
+@@ -840,6 +848,7 @@
+ 
+ u8 *rwnx_build_bcn(struct rwnx_bcn *bcn, struct cfg80211_beacon_data *new)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     u8 *buf, *pos;
+ 
+     if (new->head) {
+@@ -909,6 +918,7 @@
+ 
+ static void rwnx_del_bcn(struct rwnx_bcn *bcn)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     if (bcn->head) {
+         kfree(bcn->head);
+         bcn->head = NULL;
+@@ -937,6 +947,7 @@
+ void rwnx_chanctx_link(struct rwnx_vif *vif, u8 ch_idx,
+                        struct cfg80211_chan_def *chandef)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_chanctx *ctxt;
+ 
+     if (ch_idx >= NX_CHAN_CTXT_CNT) {
+@@ -964,6 +975,7 @@
+  */
+ void rwnx_chanctx_unlink(struct rwnx_vif *vif)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_chanctx *ctxt;
+ 
+     if (vif->ch_index == RWNX_CH_NOT_SET)
+@@ -994,6 +1006,7 @@
+ 
+ int rwnx_chanctx_valid(struct rwnx_hw *rwnx_hw, u8 ch_idx)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     if (ch_idx >= NX_CHAN_CTXT_CNT ||
+         rwnx_hw->chanctx_table[ch_idx].chan_def.chan == NULL) {
+         return 0;
+@@ -1004,6 +1017,7 @@
+ 
+ static void rwnx_del_csa(struct rwnx_vif *vif)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     //struct rwnx_hw *rwnx_hw = vif->rwnx_hw;
+     struct rwnx_csa *csa = vif->ap.csa;
+ 
+@@ -1017,9 +1031,15 @@
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+ static void rwnx_csa_finish(struct work_struct *ws)
+ {
+-
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_csa *csa = container_of(ws, struct rwnx_csa, work);
+     struct rwnx_vif *vif = csa->vif;
++
++    if (!csa || !vif) {
++        RWNX_DBG("NULL csa or vif in csa_finish\n");
++        return;
++    }
++
+     struct rwnx_hw *rwnx_hw = vif->rwnx_hw;
+     int error = csa->status;
+     u8 *buf, *pos;
+@@ -1112,6 +1132,7 @@
+  */
+ void rwnx_external_auth_enable(struct rwnx_vif *vif)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     vif->sta.external_auth = true;
+     rwnx_txq_unk_vif_init(vif);
+     rwnx_txq_start(rwnx_txq_vif_get(vif, NX_UNK_TXQ_TYPE), 0);
+@@ -1124,6 +1145,7 @@
+  */
+ void rwnx_external_auth_disable(struct rwnx_vif *vif)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     if (!vif->sta.external_auth)
+         return;
+ 
+@@ -1146,6 +1168,7 @@
+  */
+ void rwnx_update_mesh_power_mode(struct rwnx_vif *vif)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     enum nl80211_mesh_power_mode mesh_pm;
+     struct rwnx_sta *sta;
+     struct mesh_config mesh_conf;
+@@ -1233,6 +1256,7 @@
+  */
+ static int rwnx_open(struct net_device *dev)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = rwnx_vif->rwnx_hw;
+     struct mm_add_if_cfm add_if_cfm;
+@@ -1394,6 +1418,7 @@
+  */
+ static int rwnx_close(struct net_device *dev)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = rwnx_vif->rwnx_hw;
+     struct aicwf_bus *bus_if = NULL;
+@@ -1731,6 +1756,7 @@
+ 
+ static int parse_line (char *line, char *argv[])
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int nargs = 0;
+ 
+     while (nargs < CMD_MAXARGS) {
+@@ -1780,6 +1806,7 @@
+ 
+ unsigned int command_strtoul(const char *cp, char **endp, unsigned int base)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     unsigned int result = 0, value, is_neg=0;
+ 
+     if (*cp == '0') {
+@@ -1814,6 +1841,7 @@
+ 
+ int handle_private_cmd(struct net_device *net, char *command, u32 cmd_len)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int bytes_written = 0;
+     char* para = NULL;
+     char* cmd = NULL;
+@@ -2704,6 +2732,7 @@
+ 
+ void set_vendor_extension_ie(char *command){
+ 
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	char databyte[3]={0x00, 0x00, 0x00};
+ 	int skip = strlen(CMD_SET_VENDOR_EX_IE) + 1;
+ 	int command_index = skip;
+@@ -2727,6 +2756,7 @@
+ 
+ int android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
+ {
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #define PRIVATE_COMMAND_MAX_LEN 8192
+ #define PRIVATE_COMMAND_DEF_LEN 4096
+ 
+@@ -2894,6 +2924,7 @@
+ static int rwnx_do_ioctl(struct net_device *net, struct ifreq *req, int cmd)
+ #endif
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int ret = 0;
+     ///TODO: add ioctl command handler later
+     switch(cmd)
+@@ -2930,9 +2961,23 @@
+  *	3. Update dev->stats asynchronously and atomically, and define
+  *	   neither operation.
+  */
+-static struct net_device_stats *rwnx_get_stats(struct net_device *dev)
++static __maybe_unused
++struct net_device_stats *rwnx_get_stats(struct net_device *dev)
+ {
++    static struct net_device_stats dummy_stats = {0};
++
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
++
++    if (!dev) {
++        pr_err("aic8800: dev == NULL\n");
++        return &dummy_stats;
++    }
++
+     struct rwnx_vif *vif = netdev_priv(dev);
++    if (!vif || !vif->rwnx_hw || !vif->ndev) {
++        pr_err("aic8800: vif or rwnx_hw not ready (AP race) - returning dummy\n");
++        return &dummy_stats;
++    }
+ 
+     return &vif->net_stats;
+ }
+@@ -2943,13 +2988,12 @@
+  *	Called to decide which queue to when device supports multiple
+  *	transmit queues.
+  */
+-u16 rwnx_select_queue(struct net_device *dev, struct sk_buff *skb,
++static u16 rwnx_select_queue(struct net_device *dev, struct sk_buff *skb,
+                       struct net_device *sb_dev)
+ {
+-    struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+-    return rwnx_select_txq(rwnx_vif, skb);
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
++    return 0;
+ }
+-
+ /**
+  * int (*ndo_set_mac_address)(struct net_device *dev, void *addr);
+  *	This function  is called when the Media Access Control address
+@@ -2958,6 +3002,7 @@
+  */
+ static int rwnx_set_mac_address(struct net_device *dev, void *addr)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct sockaddr *sa = addr;
+     int ret;
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+@@ -2978,7 +3023,7 @@
+     .ndo_do_ioctl           = rwnx_do_ioctl,
+     #endif
+     .ndo_start_xmit         = rwnx_start_xmit,
+-    .ndo_get_stats          = rwnx_get_stats,
++    .ndo_get_stats          = NULL,
+ #ifndef CONFIG_ONE_TXQ
+     .ndo_select_queue       = rwnx_select_queue,
+ #endif
+@@ -2996,12 +3041,13 @@
+     .ndo_start_xmit         = rwnx_start_monitor_if_xmit,
+     .ndo_select_queue       = rwnx_select_queue,
+     #endif
+-    .ndo_get_stats          = rwnx_get_stats,
++    .ndo_get_stats          = NULL,
+     .ndo_set_mac_address    = rwnx_set_mac_address,
+ };
+ 
+ static void rwnx_netdev_setup(struct net_device *dev)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     ether_setup(dev);
+     dev->priv_flags &= ~IFF_TX_SKB_SHARING;
+     dev->netdev_ops = &rwnx_netdev_ops;
+@@ -3040,6 +3086,7 @@
+                                                enum nl80211_iftype type,
+                                                struct vif_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct net_device *ndev;
+     struct rwnx_vif *vif;
+     int min_idx, max_idx;
+@@ -3236,6 +3283,7 @@
+ void aicwf_p2p_alive_timeout(struct timer_list *t)
+ #endif
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw;
+     struct rwnx_vif *rwnx_vif;
+     struct rwnx_vif *rwnx_vif1, *tmp;
+@@ -3309,6 +3357,7 @@
+                                                enum nl80211_iftype type,
+                                                struct vif_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct wireless_dev *wdev = NULL;
+     struct rwnx_vif *vif;
+     int min_idx, max_idx;
+@@ -3396,6 +3445,7 @@
+                                           struct rwnx_vif *rwnx_vif, u8 *addr,
+                                           __le16 fc, bool ap)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     if (ap) {
+         /* only deauth, disassoc and action are bufferable MMPDUs */
+         bool bufferable = ieee80211_is_deauth(fc) ||
+@@ -3453,6 +3503,7 @@
+                                                     enum nl80211_iftype type,
+                                                     struct vif_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct wireless_dev *wdev;
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 1, 0))
+@@ -3478,6 +3529,7 @@
+  */
+ static int rwnx_cfg80211_del_iface(struct wiphy *wiphy, struct wireless_dev *wdev)
+ {
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+     struct net_device *dev = wdev->netdev;
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+@@ -3491,18 +3543,17 @@
+ 	AICWFDBG(LOGINFO, "del_iface: %p, %x\n",wdev, wdev->address[5]);
+ 
+     if (!dev || !rwnx_vif->ndev) {
+-#if 0
+ 	if (rwnx_vif == rwnx_hw->p2p_dev_vif) {
+ 		if (timer_pending(&rwnx_hw->p2p_alive_timer)) {
+-		#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
+-            timer_delete_sync(&rwnx_hw->p2p_alive_timer);
++	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)
++            		timer_delete_sync(&rwnx_hw->p2p_alive_timer);
+         #else
+ 			del_timer_sync(&rwnx_hw->p2p_alive_timer);
+         #endif
+ 		}
+ 	}
+-#endif
+-        cfg80211_unregister_wdev(wdev);
++
++	cfg80211_unregister_wdev(wdev);
+         spin_lock_bh(&rwnx_hw->cb_lock);
+         list_del(&rwnx_vif->list);
+         spin_unlock_bh(&rwnx_hw->cb_lock);
+@@ -3523,7 +3574,7 @@
+ #else
+         unregister_netdevice(dev);
+ #endif
+-
++	msleep(100);
+     }
+ 
+     spin_lock_bh(&rwnx_hw->cb_lock);
+@@ -3533,8 +3584,7 @@
+     rwnx_vif->ndev = NULL;
+ 
+     /* Clear the priv in adapter */
+-    dev->ieee80211_ptr = NULL;
+-
++    //dev->ieee80211_ptr = NULL;
+     return 0;
+ }
+ 
+@@ -3547,10 +3597,20 @@
+                                       enum nl80211_iftype type,
+                                       struct vif_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
++    if (!dev || !dev->ieee80211_ptr) {
++        pr_err("aic8800: %s: dev or ieee80211_ptr is NULL\n", __func__);
++        return -EINVAL;
++    }
++    struct rwnx_vif *vif = netdev_priv(dev);
++    if (!vif) {
++        pr_err("aic8800: %s: vif is NULL\n", __func__);
++        return -EINVAL;
++    }
+ #ifndef CONFIG_RWNX_MON_DATA
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ #endif
+-    struct rwnx_vif *vif = netdev_priv(dev);
++    //struct rwnx_vif *vif = netdev_priv(dev);
+     struct mm_add_if_cfm add_if_cfm;
+     bool_l p2p = false;
+     int ret;
+@@ -3685,6 +3745,7 @@
+ 
+ static int rwnx_cfgp2p_start_p2p_device(struct wiphy *wiphy, struct wireless_dev *wdev)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int ret = 0;
+ 
+     //do nothing
+@@ -3695,6 +3756,7 @@
+ 
+ static void rwnx_cfgp2p_stop_p2p_device(struct wiphy *wiphy, struct wireless_dev *wdev)
+ {
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #if 0
+     int ret = 0;
+     struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+@@ -3771,6 +3833,7 @@
+ }
+ 
+ int rwnx_send_check_p2p(struct cfg80211_scan_request *param){
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	int index = (u8)min_t(int, SCAN_SSID_MAX, param->n_ssids);
+ 	int i = 0;
+ 
+@@ -3790,12 +3853,14 @@
+  *	For scan results, call cfg80211_inform_bss(); you can call this outside
+  *	the scan/scan_done bracket too.
+  */
+-static int rwnx_cfg80211_scan(struct wiphy *wiphy,
++static __maybe_unused
++int rwnx_cfg80211_scan(struct wiphy *wiphy,
+ 	#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+ 	struct net_device *dev,
+ 	#endif
+                               struct cfg80211_scan_request *request)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)
+     struct rwnx_vif *rwnx_vif = container_of(request->wdev, struct rwnx_vif,
+@@ -3860,6 +3925,7 @@
+                                  u8 key_index, bool pairwise, const u8 *mac_addr,
+                                  struct key_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(netdev);
+     int i, error = 0;
+@@ -3958,6 +4024,7 @@
+                                  void *cookie,
+                                  void (*callback)(void *cookie, struct key_params*))
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+ 
+     return -1;
+@@ -3975,6 +4042,7 @@
+ 
+                                  u8 key_index, bool pairwise, const u8 *mac_addr)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(netdev);
+     int error;
+@@ -4015,6 +4083,7 @@
+ #endif
+                                          u8 key_index, bool unicast, bool multicast)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+ 
+     return 0;
+@@ -4030,6 +4099,7 @@
+ #endif
+                                               u8 key_index)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     return 0;
+ }
+ 
+@@ -4044,6 +4114,7 @@
+ static int rwnx_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
+                                  struct cfg80211_connect_params *sme)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct sm_connect_cfm sm_connect_cfm;
+@@ -4169,6 +4240,7 @@
+ static int rwnx_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
+                                     u16 reason_code)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+ 
+@@ -4233,7 +4305,7 @@
+                         )
+ #endif
+ {
+-
++        printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ 	//struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+ 	AICWFDBG(LOGINFO, "%s enter wiphy:%p\r\n", __func__, wiphy);
+@@ -4252,6 +4324,7 @@
+                              struct cfg80211_sched_scan_request *request)
+ 
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ 	struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct cfg80211_scan_request *scan_request = NULL;
+@@ -4334,6 +4407,7 @@
+ static int rwnx_cfg80211_external_auth(struct wiphy *wiphy, struct net_device *dev,
+                                        struct cfg80211_external_auth_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+ 
+@@ -4359,6 +4433,7 @@
+ #endif
+ 	struct station_parameters *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct me_sta_add_cfm me_sta_add_cfm;
+@@ -4492,6 +4567,7 @@
+ #endif
+ )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_sta *cur, *tmp;
+@@ -4608,6 +4684,7 @@
+ 
+ void apm_staloss_work_process(struct work_struct *work)
+ {
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	struct rwnx_hw *rwnx_hw = container_of(work, struct rwnx_hw, apmStalossWork);
+ 	struct rwnx_sta *cur, *tmp;
+ 	int error = 0;
+@@ -4722,6 +4799,7 @@
+ 
+ void apm_probe_sta_work_process(struct work_struct *work)
+ {
++       printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+        struct apm_probe_sta *probe_sta = container_of(work, struct apm_probe_sta, apmprobestaWork);
+        struct rwnx_vif *rwnx_vif = container_of(probe_sta, struct rwnx_vif, sta_probe);
+        bool found = false;
+@@ -4770,6 +4848,7 @@
+ #endif
+ 	struct station_parameters *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(dev);
+     struct rwnx_sta *sta;
+@@ -4929,6 +5008,7 @@
+ static int rwnx_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
+                                   struct cfg80211_ap_settings *settings)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct apm_start_cfm apm_start_cfm;
+@@ -5037,6 +5117,7 @@
+                                        struct cfg80211_beacon_data *info)
+ #endif
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(dev);
+     struct rwnx_bcn *bcn = &vif->ap.bcn;
+@@ -5089,6 +5170,7 @@
+ #endif
+ 
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_sta *sta;
+@@ -5139,6 +5221,7 @@
+ cfg80211_chandef_identical(const struct cfg80211_chan_def *chandef1,
+ 			   const struct cfg80211_chan_def *chandef2)
+ {
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	return (chandef1->chan == chandef2->chan &&
+ 		chandef1->width == chandef2->width &&
+ 		chandef1->center_freq1 == chandef2->center_freq1 &&
+@@ -5154,6 +5237,7 @@
+     struct cfg80211_chan_def *chandef
+ )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif;
+     struct me_config_monitor_cfm cfm;
+@@ -5212,6 +5296,7 @@
+ int rwnx_cfg80211_probe_client(struct wiphy *wiphy, struct net_device *dev,
+             const u8 *peer, u64 *cookie)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     //struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(dev);
+     struct rwnx_sta *sta = NULL;
+@@ -5254,6 +5339,7 @@
+ #endif
+                    u16 frame_type, bool reg)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ }
+ 
+ /**
+@@ -5268,6 +5354,7 @@
+     #endif
+     u32 changed)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     return 0;
+ }
+ /**
+@@ -5286,6 +5373,7 @@
+ #endif
+                                       enum nl80211_tx_power_setting type, int mbm)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)
+     struct wireless_dev *wdev = NULL;
+     #endif
+@@ -5324,6 +5412,7 @@
+                                         struct net_device *dev,
+                                         bool enabled, int timeout)
+ {
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #if 0
+ 
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+@@ -5354,6 +5443,7 @@
+ static int rwnx_cfg80211_set_txq_params(struct wiphy *wiphy, struct net_device *dev,
+                                         struct ieee80211_txq_params *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     u8 hw_queue, aifs, cwmin, cwmax;
+@@ -5403,6 +5493,7 @@
+                             #endif
+                                 unsigned int duration, u64 *cookie)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)
+     struct rwnx_vif *rwnx_vif = container_of(wdev, struct rwnx_vif, wdev);
+@@ -5537,6 +5628,7 @@
+                                             #endif
+                                                   u64 cookie)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ #ifdef CREATE_TRACE_POINTS
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+@@ -5569,6 +5661,7 @@
+ static int rwnx_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *netdev,
+                                      int idx, struct survey_info *info)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct ieee80211_supported_band *sband;
+     struct rwnx_survey_info *rwnx_survey;
+@@ -5641,6 +5734,7 @@
+ #endif
+                                                     struct cfg80211_chan_def *chandef)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = container_of(wdev, struct rwnx_vif, wdev);
+     struct rwnx_chanctx *ctxt;
+@@ -5673,6 +5767,7 @@
+ #else
+ struct ieee80211_channel *rwnx_cfg80211_get_channel(struct wiphy *wiphy)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct ieee80211_channel *chan = NULL;
+     struct rwnx_vif *vif;
+@@ -5718,6 +5813,7 @@
+                                  u64 *cookie)
+ #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0))
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+@@ -5835,7 +5931,7 @@
+ /**
+  * @start_radar_detection: Start radar detection in the driver.
+  */
+-static
++static __maybe_unused
+ int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
+                                         struct net_device *dev,
+                                         struct cfg80211_chan_def *chandef
+@@ -5848,6 +5944,11 @@
+ 
+                                         )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
++    if (!dev || !chandef) {
++        RWNX_DBG("NULL dev or chandef in start_radar_detection\n");
++        return -EINVAL;
++    }
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct apm_start_cac_cfm cfm;
+@@ -5882,6 +5983,7 @@
+                             struct net_device *dev,
+                             struct cfg80211_update_ft_ies_params *ftie)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     return 0;
+ }
+ 
+@@ -5893,6 +5995,7 @@
+                                   struct net_device *dev,
+                                   int32_t rssi_thold, uint32_t rssi_hyst)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+ 
+@@ -5913,8 +6016,15 @@
+                                  struct net_device *dev,
+                                  struct cfg80211_csa_settings *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *vif = netdev_priv(dev);
++
++    if (!dev || !params) {
++        RWNX_DBG("NULL dev or params in channel_switch\n");
++        return -EINVAL;
++    }
++
+     struct rwnx_ipc_elem_var elem;
+     struct rwnx_bcn *bcn, *bcn_after;
+     struct rwnx_csa *csa;
+@@ -6251,6 +6361,7 @@
+ int rwnx_cfg80211_change_bss(struct wiphy *wiphy, struct net_device *dev,
+                              struct bss_parameters *params)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     int res =  -EOPNOTSUPP;
+ 
+@@ -6272,7 +6383,7 @@
+ static int rwnx_fill_station_info(struct rwnx_sta *sta, struct rwnx_vif *vif,
+                                   struct station_info *sinfo)
+ {
+-
++        printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	struct rwnx_sta_stats *stats = &sta->stats;
+ 	struct rx_vector_1 *rx_vect1 = &stats->last_rx.rx_vect1;
+ 	union rwnx_rate_ctrl_info *rate_info;
+@@ -6476,6 +6587,7 @@
+ #endif
+ 	struct station_info *sinfo)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *vif = netdev_priv(dev);
+     struct rwnx_sta *sta = NULL;
+ 
+@@ -6512,6 +6624,7 @@
+ static int rwnx_cfg80211_dump_station(struct wiphy *wiphy, struct net_device *dev,
+                                       int idx, u8 *mac, struct station_info *sinfo)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_sta *sta_iter, *sta = NULL;
+@@ -6582,6 +6695,7 @@
+ #endif
+ )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct mesh_path_update_cfm cfm;
+@@ -6603,6 +6717,7 @@
+ #endif
+ )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct mesh_path_update_cfm cfm;
+@@ -6626,6 +6741,7 @@
+ #endif
+ )
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct mesh_path_update_cfm cfm;
+@@ -6642,6 +6758,20 @@
+ static int rwnx_cfg80211_get_mpath(struct wiphy *wiphy, struct net_device *dev,
+                                    u8 *dst, u8 *next_hop, struct mpath_info *pinfo)
+ {
++    if (!dev) {
++        pr_err("aic8800: %s: dev is NULL\n", __func__);
++        return -EINVAL;
++    }
++    struct rwnx_vif *vif = netdev_priv(dev);
++    if (!vif) {
++        pr_err("aic8800: %s: vif is NULL\n", __func__);
++        return -EINVAL;
++    }
++    if (!vif->rwnx_hw) {
++        pr_err("aic8800: %s: vif->rwnx_hw is NULL\n", __func__);
++        return -EINVAL;
++    }
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_mesh_path *mesh_path = NULL;
+     struct rwnx_mesh_path *cur;
+@@ -6680,6 +6810,7 @@
+                                     int idx, u8 *dst, u8 *next_hop,
+                                     struct mpath_info *pinfo)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_mesh_path *mesh_path = NULL;
+     struct rwnx_mesh_path *cur;
+@@ -6720,6 +6851,7 @@
+ static int rwnx_cfg80211_get_mpp(struct wiphy *wiphy, struct net_device *dev,
+                                  u8 *dst, u8 *mpp, struct mpath_info *pinfo)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_mesh_proxy *mesh_proxy = NULL;
+     struct rwnx_mesh_proxy *cur;
+@@ -6759,6 +6891,7 @@
+ static int rwnx_cfg80211_dump_mpp(struct wiphy *wiphy, struct net_device *dev,
+                                   int idx, u8 *dst, u8 *mpp, struct mpath_info *pinfo)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_mesh_proxy *mesh_proxy = NULL;
+     struct rwnx_mesh_proxy *cur;
+@@ -6802,6 +6935,7 @@
+ static int rwnx_cfg80211_get_mesh_config(struct wiphy *wiphy, struct net_device *dev,
+                                          struct mesh_config *conf)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+ 
+     if (RWNX_VIF_TYPE(rwnx_vif) != NL80211_IFTYPE_MESH_POINT)
+@@ -6816,6 +6950,7 @@
+ static int rwnx_cfg80211_update_mesh_config(struct wiphy *wiphy, struct net_device *dev,
+                                             u32 mask, const struct mesh_config *nconf)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct mesh_update_cfm cfm;
+@@ -6853,6 +6988,7 @@
+ static int rwnx_cfg80211_join_mesh(struct wiphy *wiphy, struct net_device *dev,
+                                    const struct mesh_config *conf, const struct mesh_setup *setup)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct mesh_start_cfm mesh_start_cfm;
+@@ -6936,6 +7072,7 @@
+  */
+ static int rwnx_cfg80211_leave_mesh(struct wiphy *wiphy, struct net_device *dev)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
+     struct mesh_stop_cfm mesh_stop_cfm;
+@@ -6981,7 +7118,7 @@
+     .change_virtual_intf = rwnx_cfg80211_change_iface,
+     .start_p2p_device = rwnx_cfgp2p_start_p2p_device,
+     .stop_p2p_device = rwnx_cfgp2p_stop_p2p_device,
+-    .scan = rwnx_cfg80211_scan,
++    .scan = NULL,
+     .connect = rwnx_cfg80211_connect,
+     .disconnect = rwnx_cfg80211_disconnect,
+     .add_key = rwnx_cfg80211_add_key,
+@@ -7009,7 +7146,7 @@
+     .cancel_remain_on_channel = rwnx_cfg80211_cancel_remain_on_channel,
+     .dump_survey = rwnx_cfg80211_dump_survey,
+     .get_channel = rwnx_cfg80211_get_channel,
+-    .start_radar_detection = rwnx_cfg80211_start_radar_detection,
++    .start_radar_detection = NULL,
+     .update_ft_ies = rwnx_cfg80211_update_ft_ies,
+     .set_cqm_rssi_config = rwnx_cfg80211_set_cqm_rssi_config,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+@@ -7038,6 +7175,7 @@
+  *********************************************************************/
+ static void rwnx_wdev_unregister(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_vif *rwnx_vif, *tmp;
+ 
+     rtnl_lock();
+@@ -7053,6 +7191,7 @@
+ 
+ static void rwnx_set_vers(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     u32 vers = rwnx_hw->version_cfm.version_lmac;
+ 
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+@@ -7066,6 +7205,7 @@
+ static void rwnx_reg_notifier(struct wiphy *wiphy,
+                               struct regulatory_request *request)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ 
+     printk("%s Enter\r\n", __func__);
+@@ -7083,6 +7223,7 @@
+ 
+ static void rwnx_enable_mesh(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct wiphy *wiphy = rwnx_hw->wiphy;
+ 
+     if (!rwnx_mod_params.mesh)
+@@ -8985,6 +9126,7 @@
+ };
+ 
+ static void system_config_8800(struct rwnx_hw *rwnx_hw){
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int syscfg_num;
+     int ret, cnt;
+     const u32 mem_addr = 0x40500000;
+@@ -9063,6 +9205,7 @@
+ 
+ static void system_config(struct rwnx_hw *rwnx_hw)
+ {
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8801){
+ 		system_config_8800(rwnx_hw);
+ 	}else if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800DC ||
+@@ -9073,6 +9216,7 @@
+ 
+ static int wdt_config(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int ret = 0;
+     ret = rwnx_send_dbg_mem_mask_write_req(rwnx_hw,
+                 wdt_tbl_masked[0][0], wdt_tbl_masked[0][1], wdt_tbl_masked[0][2]);
+@@ -9141,6 +9285,7 @@
+ 
+ static void aicwf_usb_config(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int usbcfg_num = 0;
+     int ret = 0, cnt = 0;
+     struct dbg_mem_read_cfm rd_mem_addr_cfm;
+@@ -9168,6 +9313,7 @@
+ 
+ static int start_from_bootrom(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     int ret = 0;
+ 
+ 	/* memory access */
+@@ -9201,7 +9347,7 @@
+ 
+ 
+ int rwnx_ic_system_init(struct rwnx_hw *rwnx_hw){
+-
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8801){
+ 		system_config(rwnx_hw);
+ 	}else if(rwnx_hw->usbdev->chipid == PRODUCT_ID_AIC8800DC ||
+@@ -9231,6 +9377,7 @@
+ 
+ 
+ int rwnx_ic_rf_init(struct rwnx_hw *rwnx_hw){
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	struct mm_set_rf_calib_cfm cfm;
+ 	int ret = 0;
+ #ifdef CONFIG_5M10M
+@@ -9270,6 +9417,7 @@
+ extern int aicwf_vendor_init(struct wiphy *wiphy);
+ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct rwnx_hw *rwnx_hw;
+     struct rwnx_conf_file init_conf;
+     int ret = 0;
+@@ -9692,6 +9840,7 @@
+ 
+ void rwnx_cfg80211_deinit(struct rwnx_hw *rwnx_hw)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     struct mm_set_stack_start_cfm set_start_cfm;
+ 
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+@@ -9724,6 +9873,7 @@
+ 
+ static void aicsmac_driver_register(void)
+ {
++printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ #ifdef AICWF_SDIO_SUPPORT
+     aicwf_sdio_register();
+ #endif
+@@ -9743,13 +9893,14 @@
+ 
+ void aicwf_hostif_ready(void)
+ {
++	printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+ 	g_rwnx_plat->enabled = true;
+ 	complete(&hostif_register_done);
+ }
+ 
+ static int __init rwnx_mod_init(void)
+ {
+-
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+     rwnx_print_version();
+ 	AICWFDBG(LOGINFO, "RELEASE DATE:%s \r\n", RELEASE_DATE);
+@@ -9787,6 +9938,7 @@
+  */
+ static void __exit rwnx_mod_exit(void)
+ {
++    printk(KERN_DEBUG "aic8800: %s entered\n", __func__);
+     RWNX_DBG(RWNX_FN_ENTRY_STR);
+ 
+ #ifdef AICWF_PCIE_SUPPORT
